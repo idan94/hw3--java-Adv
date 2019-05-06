@@ -48,8 +48,6 @@ public class DogTest {
 		tester = new StoryTesterImpl();
 	}
 
-
-	
 	@Test
 	public void test1() throws Exception {
 		try {

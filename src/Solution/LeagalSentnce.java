@@ -11,11 +11,11 @@ public class LeagalSentnce {
 
     public LeagalSentnce(String str) {
         this.input = str;
-        this.type = str.split(" ", 1)[0];
+        this.type = str.split(" ", 2)[0];
         parametrs = new ArrayList<ArrayList<String>>();
 
         String[] centences = str.split("or");
-        comperable = centences[0];
+        comperable = centences[0].split(" ", 2)[1];
         for (String subStr : centences) {
 
             String[] array = subStr.split("and");
@@ -30,6 +30,17 @@ public class LeagalSentnce {
         for (String param : parametrs.get(0)) {
             comperable = comperable.replace(param, "&");
         }
+    }
+    public LeagalSentnce(LeagalSentnce cent)
+    {
+        this.input = cent.input;
+        this.type = cent.type;
+        this.parametrs = new ArrayList<>();
+        for(ArrayList<String> param:cent.parametrs)
+        {
+            this.parametrs.add(new ArrayList<>(param));
+        }
+        this.comperable = cent.comperable;
     }
 
     public String getInput() {

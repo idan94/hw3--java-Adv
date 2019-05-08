@@ -39,8 +39,6 @@ public class StoryTesterImpl implements StoryTester {
         }
         ArrayList<Method> toRet =  Arrays.stream(testClass.getDeclaredMethods()).filter(m->methodIsTypedAs(m,cent.getType()))
                 .collect(Collectors.toCollection(ArrayList::new));
-        String s1 = cent.getComperable();
-        String s2 = AnnotaionsToComapreable(getAnnoVlaue(toRet.get(0),cent.getType()));
         toRet = toRet.stream().filter(m->(cent.getComperable().equals(AnnotaionsToComapreable(getAnnoVlaue(m,cent.getType())))))
                 .collect(Collectors.toCollection(ArrayList::new));
         if(toRet.isEmpty())

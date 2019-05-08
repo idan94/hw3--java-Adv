@@ -1,6 +1,6 @@
 package Solution;
 
-import Solution.LegalSentnce.Type;
+import Solution.LeagalSentnce.Type;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -9,16 +9,16 @@ import java.util.ArrayList;
 public class Story {
 
     private String input;
-    private ArrayList<LegalSentnce> Sentences;
+    private ArrayList<LeagalSentnce> Sentences;
 
     public Story (String str)
     {
         input = str;
         Sentences = new ArrayList<>();
         String[] array = str.split("\n");
-        for(String sentence:array)
+        for(String cent:array)
         {
-            Sentences.add(new LegalSentnce(sentence));
+            Sentences.add(new LeagalSentnce(cent));
         }
     }
 
@@ -26,11 +26,11 @@ public class Story {
         return input;
     }
 
-    public ArrayList<LegalSentnce> getSentence() {
-        ArrayList<LegalSentnce> toRet = new ArrayList<>();
-        for (LegalSentnce sentence:Sentences)
+    public ArrayList<LeagalSentnce> getSentence() {
+        ArrayList<LeagalSentnce> toRet = new ArrayList<>();
+        for (LeagalSentnce cent:Sentences)
         {
-            toRet.add(new LegalSentnce(sentence));
+            toRet.add(new LeagalSentnce(cent));
         }
         return toRet;
     }

@@ -1,24 +1,36 @@
 package Solution;
 
+import java.net.InterfaceAddress;
+import java.text.Annotation;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
 public class LeagalSentnce {
-    String input;
-    String type;
-    ArrayList<ArrayList<String>> parametrs;
-    String comperable;
+
+    public enum Type {Given,When,Then}
+    private String input;
+    private Type type;
+    private ArrayList<ArrayList<String>> parametrs;
+    private String comperable;
 
     public LeagalSentnce(String str) {
         this.input = str;
-        this.type = str.split(" ", 2)[0];
+        String temp_type = str.split(" ", 2)[0];
+        switch (temp_type)
+        {
+            case("Given"):this.type = Type.Given;
+            break;
+            case("When"):this.type = Type.When;
+            break;
+            default:this.type = Type.Then;
+        }
         parametrs = new ArrayList<ArrayList<String>>();
 
-        String[] centences = str.split("or");
+        String[] centences = str.split(" or");
         comperable = centences[0].split(" ", 2)[1];
         for (String subStr : centences) {
 
-            String[] array = subStr.split("and");
+            String[] array = subStr.split(" and");
             ArrayList<String> comperableTemp = new ArrayList<String>();
             for (String S : array) {
                 String[] temp = S.split(" ");
@@ -47,7 +59,7 @@ public class LeagalSentnce {
         return input;
     }
 
-    public String getType() {
+    public Type getType() {
         return type;
     }
 

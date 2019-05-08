@@ -1,5 +1,9 @@
 package Solution;
 
+import Solution.LeagalSentnce.Type;
+
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 public class Story {
@@ -11,7 +15,7 @@ public class Story {
     {
         input = str;
         Sentences = new ArrayList<>();
-        String[] array = str.split("Given|Then|When");
+        String[] array = str.split("\n");
         for(String cent:array)
         {
             Sentences.add(new LeagalSentnce(cent));
@@ -30,4 +34,5 @@ public class Story {
         }
         return toRet;
     }
+
 }

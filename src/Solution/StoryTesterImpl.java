@@ -1,6 +1,9 @@
 package Solution;
 
+import Provided.GivenNotFoundException;
 import Provided.StoryTester;
+import Provided.ThenNotFoundException;
+import Provided.WhenNotFoundException;
 
 import java.awt.List;
 import java.lang.annotation.Annotation;
@@ -22,8 +25,18 @@ public class StoryTesterImpl implements StoryTester {
             throw new IllegalArgumentException();
         }
     }
-    public static Method AnnotaionsMethod(Class<?> testClass, LeagalSentnce cent)
+    public static Method AnnotaionsMethod(Class<?> testClass, LeagalSentnce cent) throws GivenNotFoundException,
+            WhenNotFoundException, ThenNotFoundException
     {
+        if(testClass == null)
+        {
+            switch (cent.getType())
+            {
+                case Given: throw new GivenNotFoundException();
+                case When: throw new WhenNotFoundException();
+                default: throw new ThenNotFoundException();
+            }
+        }
         ArrayList<Method> toRet =  Arrays.stream(testClass.getDeclaredMethods()).filter(m->methodIsTypedAs(m,cent.getType()))
                 .collect(Collectors.toCollection(ArrayList::new));
         String s1 = cent.getComperable();
@@ -32,7 +45,7 @@ public class StoryTesterImpl implements StoryTester {
                 .collect(Collectors.toCollection(ArrayList::new));
         if(toRet.isEmpty())
         {
-            return null;
+            AnnotaionsMethod(testClass.getSuperclass(),cent);
         }
         return toRet.get(0);
     }

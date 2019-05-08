@@ -39,7 +39,7 @@ public class test {
         Story story = new Story(str);
 
         boolean a = StoryTesterImpl.methodIsTypedAs(theClass.getDeclaredMethods()[0],Type.Given);
-        String name = StoryTesterImpl.AnnotaionsMethod(theClass,story.getSentence().get(0)).getName();
+        String name = StoryTesterImpl.AnnotaionsMethod(theClass,story.getSentence().get(2)).getName();
         System.out.println();
 
     }

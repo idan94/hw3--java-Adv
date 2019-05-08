@@ -38,7 +38,7 @@ public class test {
                 + "Then the house condition is clean";
         Story story = new Story(str);
 
-
+        boolean a = StoryTesterImpl.methodIsTypedAs(theClass.getDeclaredMethods()[0],Type.Given);
         String name = StoryTesterImpl.AnnotaionsMethod(theClass,story.getSentence().get(0)).getName();
         System.out.println();
 

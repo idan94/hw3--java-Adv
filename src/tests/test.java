@@ -4,15 +4,12 @@ package tests;
 import Solution.*;
 import org.junit.Test;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
-import static Solution.LeagalSentnce.*;
-import static Solution.StoryTesterImpl.storyToSentenceList;
+import static Solution.LegalSentnce.*;
 
 public class test {
 

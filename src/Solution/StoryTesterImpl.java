@@ -3,41 +3,43 @@ package Solution;
 import Provided.*;
 import org.junit.ComparisonFailure;
 
-import java.awt.List;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
-import java.util.stream.Collector;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
 public class StoryTesterImpl implements StoryTester {
     @Override
     public void testOnInheritanceTree(String story, Class<?> testClass) throws Exception {
+        if(testClass == null){
+            throw new IllegalArgumentException();
+        }
         checkStory(story, testClass);
     }
 
     @Override
     public void testOnNestedClasses(String story, Class<?> testClass) throws Exception {
+        if(testClass == null){
+            throw new IllegalArgumentException();
+        }
         try {
             checkStory(story, testClass);
-        } catch (GivenNotFoundException e1)
-        {
+        } catch (GivenNotFoundException e1) {
 
-                for (Class subClass:(testClass.getClasses()))
-                {
-                    try {
-                        //for each sub class, try to run the story REGULARLY until successful
-                        //or until all the subclass had run out.
-                        testOnNestedClasses(story, subClass);
-                    } catch (GivenNotFoundException e2) {continue;}
-                    return;
+            for (Class subClass : (testClass.getClasses())) {
+                try {
+                    //for each sub class, try to run the story REGULARLY until successful
+                    //or until all the subclass had run out.
+                    testOnNestedClasses(story, subClass);
+                } catch (GivenNotFoundException e2) {
+                    continue;
                 }
-                //if reached here then for all the for iterations, there were
-                //exceptions and the function was not found
-                //and so we throw the same exception we received
+                return;
+            }
+            //if reached here then for all the for iterations, there were
+            //exceptions and the function was not found
+            //and so we throw the same exception we received
             throw e1;
         }
     }
@@ -68,7 +70,7 @@ public class StoryTesterImpl implements StoryTester {
         return toRet.get(0);
     }
 
-    public static ArrayList<String> storyToSentenceList(String story) {
+    private static ArrayList<String> storyToSentenceList(String story) {
         String[] array = story.split("\n");
         return Arrays.stream(array)
                 .collect(Collectors.toCollection(ArrayList::new));
@@ -131,26 +133,27 @@ public class StoryTesterImpl implements StoryTester {
         return toRet;
     }
 
+    /**
+     * making back up object
+     *
+     * @param objTest the object we want to clone/copy
+     * @return the new backUp object
+     * @throws Exception //TODO
+     */
     private static Object makeBackUp(Object objTest) throws Exception {
         Object backUp = objTest.getClass().getConstructor().newInstance();
         for (Field fFrom : objTest.getClass().getFields()) {
             Object fieldTemp = new Object();
-            if (fFrom.get(objTest) instanceof Cloneable) {//Clone:
-                for (Class<?> c = fFrom.getClass();
-                     c == null;
-                     c = c.getSuperclass()) {
-                    try {
-                        fieldTemp = c.getDeclaredMethod("clone").invoke(fFrom.get(objTest));
-                    } catch (NoSuchMethodException e) {
-                    } catch (NullPointerException e) {
-                        throw e;
-                    }
-
-                }
-            } else {//Copy constructor:
+            //Clone:
+            if (fFrom.get(objTest) instanceof Cloneable) {
+                Method cloneMethod = fFrom.getType().getDeclaredMethod("clone");
+                cloneMethod.setAccessible(true);
+                cloneMethod.invoke(objTest);
+                //Copy constructor:
+            } else {
                 try {
-                    fieldTemp = fFrom.getClass().getDeclaredConstructor(fFrom.getType()).newInstance(fFrom.get(objTest));
-                }catch (NoSuchMethodException e) {//just save the object
+                    fieldTemp = fFrom.getType().getDeclaredConstructor(fFrom.getType()).newInstance(fFrom.get(objTest));
+                } catch (NoSuchMethodException e) {//just save the object
                     fieldTemp = fFrom.get(objTest);
                 }
             }
@@ -158,26 +161,37 @@ public class StoryTesterImpl implements StoryTester {
         }
         return backUp;
     }
+
     /**
      * main function, gets a story and test class,
      * and run the matching methods to the annotations in the story
      *
      * @param story     the story given, as String.
      * @param testClass the test class given from user, includes all the methods with annotations
-     * @throws Exception
+     * @throws Exception //TODO
      */
     private static void checkStory(String story, Class<?> testClass) throws Exception {
         Object objTest = testClass.getConstructor().newInstance();
+        Object objBackUp = objTest;
         int thenFailedCounter = 0;
         String firstThenFailed = "";
         ArrayList<String> firstThenFailedExpected = new ArrayList<>();
         ArrayList<String> firstThenFailedActual = new ArrayList<>();
-
+        LegalSentence lastLegalSentence = null;
         for (String sentence : storyToSentenceList(story)) {
             //for EACH sentence do:
-            LegalSentence tempLegalSentence = new LegalSentence(sentence);
-            Method tempMethod = AnnotationsMethod(testClass, tempLegalSentence);
-            ArrayList<ArrayList<String>> parameters = tempLegalSentence.getParameters();
+            LegalSentence currLegalSentence = new LegalSentence(sentence);
+            Method tempMethod = AnnotationsMethod(testClass, currLegalSentence);
+            ArrayList<ArrayList<String>> parameters = currLegalSentence.getParameters();
+            //BackUp:
+            if (lastLegalSentence != null) {
+                if (lastLegalSentence.getType() == LegalSentence.Type.Given
+                        ||
+                        (lastLegalSentence.getType() == LegalSentence.Type.Then
+                                && (currLegalSentence.getType() == LegalSentence.Type.When))) {
+                    objBackUp = makeBackUp(objTest);
+                }
+            }
             boolean methodThenSuccessFlag = false;//used for Then sentence with "or"'s
             for (ArrayList<String> layerOfParameters : parameters) {
                 try {
@@ -187,22 +201,22 @@ public class StoryTesterImpl implements StoryTester {
                     //Given/When run only one time- fine
                     //for Then- if one of them was successful, we want to stop check.
                 } catch (ComparisonFailure e) {
-                    assert (tempLegalSentence.getType() == LegalSentence.Type.Then);
+                    assert (currLegalSentence.getType() == LegalSentence.Type.Then);
                     firstThenFailedExpected.add(e.getExpected());
                     firstThenFailedActual.add(e.getActual());
                     //empty because if we get in here, the flag is still on FALSE
                 }
             }
             if (!methodThenSuccessFlag) { // if flag is false- means 'Then' FAILED
-                assert (tempLegalSentence.getType() == LegalSentence.Type.Then);
+                assert (currLegalSentence.getType() == LegalSentence.Type.Then);
                 if (thenFailedCounter == 0) {
-                    firstThenFailed = tempLegalSentence.getInput();
+                    firstThenFailed = currLegalSentence.getInput();
                 }
                 thenFailedCounter++;
-
+                //Restore from backUp:
+                objTest = objBackUp;
             }
-
-
+            lastLegalSentence = currLegalSentence;
         }
         if (thenFailedCounter > 0) {
             throw new StoryTestExceptionImpl(firstThenFailed, firstThenFailedExpected,

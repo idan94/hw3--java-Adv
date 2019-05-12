@@ -31,16 +31,7 @@ public class StoryTesterImpl implements StoryTester {
 
     public static Method AnnotationsMethod(Class<?> testClass, LegalSentence sentence)
             throws WordNotFoundException {
-        ArrayList<Method> toRet = Arrays.stream(testClass.getDeclaredMethods())
-                .filter(m -> methodIsTypedAs(m, sentence.getType()))
-                .collect(Collectors.toCollection(ArrayList::new));
-        String s1 = sentence.getComparable();
-        String s2 = AnnotationsToComparable(getAnnoValue(toRet.get(0), sentence.getType()));
-        toRet = toRet.stream()
-                .filter(m -> (sentence.getComparable()
-                        .equals(AnnotationsToComparable(getAnnoValue(m, sentence.getType())))))
-                .collect(Collectors.toCollection(ArrayList::new));
-        if (toRet.isEmpty()) {
+        if (testClass == null) {
             switch (sentence.getType()) {
                 case Given:
                     throw new GivenNotFoundException();
@@ -49,8 +40,18 @@ public class StoryTesterImpl implements StoryTester {
                 case Then:
                     throw new ThenNotFoundException();
             }
-            //was: return null;
         }
+        ArrayList<Method> toRet = Arrays.stream(testClass.getDeclaredMethods())
+                .filter(m -> methodIsTypedAs(m, sentence.getType()))
+                .collect(Collectors.toCollection(ArrayList::new));
+        toRet = toRet.stream()
+                .filter(m -> (sentence.getComparable()
+                        .equals(AnnotationsToComparable(getAnnoValue(m, sentence.getType())))))
+                .collect(Collectors.toCollection(ArrayList::new));
+        if (toRet.isEmpty()) {
+            return AnnotationsMethod(testClass.getSuperclass(), sentence);
+        }
+//
         return toRet.get(0);
     }
 
@@ -122,7 +123,10 @@ public class StoryTesterImpl implements StoryTester {
         for (Field fFrom : objTest.getClass().getFields()) {
             Object fieldTemp;
             if (fFrom.get(objTest) instanceof Cloneable) {//Clone:
-                fieldTemp = fFrom.get(objTest);//TODO: clone, how?
+                fieldTemp = fFrom.getClass().
+                        getMethod("clone", null).
+                        invoke(fFrom.get(objTest), null);
+                //TODO: clone, how?  fFrom.get(objTest)
             } else {//Copy constructor:
                 if (/*have copy constructor*/) {
                     //TODO: copy it with the copy Ctor.
@@ -130,6 +134,7 @@ public class StoryTesterImpl implements StoryTester {
                     fieldTemp = fFrom.get(objTest);
                 }
             }
+            //backUp.getClass().getField(fFrom.getName()).set(backUp, fieldTemp);
             backUp.getClass().getField(fFrom.getName()).set(backUp, fieldTemp);
         }
         return backUp;
@@ -147,40 +152,43 @@ public class StoryTesterImpl implements StoryTester {
         Object objTest = testClass.getConstructor().newInstance();
         int thenFailedCounter = 0;
         String firstThenFailed = "";
+        ArrayList<String> firstThenFailedExpected = new ArrayList<>();
+        ArrayList<String> firstThenFailedActual = new ArrayList<>();
+
         for (String sentence : storyToSentenceList(story)) {
             //for EACH sentence do:
             LegalSentence tempLegalSentence = new LegalSentence(sentence);
             Method tempMethod = AnnotationsMethod(testClass, tempLegalSentence);
             ArrayList<ArrayList<String>> parameters = tempLegalSentence.getParameters();
-            if (tempMethod == null || parameters == null) {
-                throw new Exception(); //TODO: Edit! throw exception
-            } else {
-                boolean methodThenSuccessFlag = false;//used for Then sentence with "or"'s
-                int countTriesForThen = (-1);
-                for (ArrayList<String> layerOfParameters : parameters) {
-                    countTriesForThen++;
-                    try {
-                        tempMethod.invoke(objTest, fixParameters(layerOfParameters, tempMethod));
-                        methodThenSuccessFlag = true;
-                        break;//Given/When run only one time- fine
-                        //for Then- if one of them was successful, we want to stop check.
-                    } catch (ComparisonFailure e) {
-                        assert (tempLegalSentence.getType() == LegalSentence.Type.Then);
-                        //empty because if we get in here, the flag is still on FALSE
-                    }
-                }
-                if (!methodThenSuccessFlag) { // if flag is false- means 'Then' FAILED
+            boolean methodThenSuccessFlag = false;//used for Then sentence with "or"'s
+            for (ArrayList<String> layerOfParameters : parameters) {
+                try {
+                    tempMethod.invoke(objTest, fixParameters(layerOfParameters, tempMethod));
+                    methodThenSuccessFlag = true;
+                    break;
+                    //Given/When run only one time- fine
+                    //for Then- if one of them was successful, we want to stop check.
+                } catch (ComparisonFailure e) {
                     assert (tempLegalSentence.getType() == LegalSentence.Type.Then);
-                    if (thenFailedCounter == 0) {
-                        firstThenFailed = tempLegalSentence.getInput();
-                    }
-                    thenFailedCounter++;
-
+                    firstThenFailedExpected.add(e.getExpected());
+                    firstThenFailedActual.add(e.getActual());
+                    //empty because if we get in here, the flag is still on FALSE
                 }
             }
+            if (!methodThenSuccessFlag) { // if flag is false- means 'Then' FAILED
+                assert (tempLegalSentence.getType() == LegalSentence.Type.Then);
+                if (thenFailedCounter == 0) {
+                    firstThenFailed = tempLegalSentence.getInput();
+                }
+                thenFailedCounter++;
+
+            }
+
+
         }
         if (thenFailedCounter > 0) {
-            throw new StoryTestExceptionImpl(firstThenFailed, , thenFailedCounter);
+            throw new StoryTestExceptionImpl(firstThenFailed, firstThenFailedExpected,
+                    firstThenFailedActual, thenFailedCounter);
         }
     }
 }

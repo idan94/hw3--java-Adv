@@ -18,18 +18,18 @@ public class StoryTestExceptionImpl extends StoryTestException {
     }
 
     public String getSentance() {
-        return null;
+        return this.sentence;
     }
 
     public List<String> getStoryExpected() {
-        return null;
+        return this.storyExpected;
     }
 
     public List<String> getTestResult() {
-        return null;
+        return this.testResult;
     }
 
     public int getNumFail() {
-        return 0;
+        return this.numFail;
     }
 }

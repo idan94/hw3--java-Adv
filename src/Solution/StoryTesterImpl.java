@@ -134,25 +134,30 @@ public class StoryTesterImpl implements StoryTester {
     private static Object makeBackUp(Object objTest) throws Exception {
         Object backUp = objTest.getClass().getConstructor().newInstance();
         for (Field fFrom : objTest.getClass().getFields()) {
-            Object fieldTemp;
+            Object fieldTemp = new Object();
             if (fFrom.get(objTest) instanceof Cloneable) {//Clone:
-                fieldTemp = fFrom.getClass().
-                        getMethod("clone", null).
-                        invoke(fFrom.get(objTest), null);
-                //TODO: clone, how?  fFrom.get(objTest)
+                for (Class<?> c = fFrom.getClass();
+                     c == null;
+                     c = c.getSuperclass()) {
+                    try {
+                        fieldTemp = c.getDeclaredMethod("clone").invoke(fFrom.get(objTest));
+                    } catch (NoSuchMethodException e) {
+                    } catch (NullPointerException e) {
+                        throw e;
+                    }
+
+                }
             } else {//Copy constructor:
-                if (/*have copy constructor*/) {
-                    //TODO: copy it with the copy Ctor.
-                } else {//just save the object
+                try {
+                    fieldTemp = fFrom.getClass().getDeclaredConstructor(fFrom.getType()).newInstance(fFrom.get(objTest));
+                }catch (NoSuchMethodException e) {//just save the object
                     fieldTemp = fFrom.get(objTest);
                 }
             }
-            //backUp.getClass().getField(fFrom.getName()).set(backUp, fieldTemp);
             backUp.getClass().getField(fFrom.getName()).set(backUp, fieldTemp);
         }
         return backUp;
     }
-
     /**
      * main function, gets a story and test class,
      * and run the matching methods to the annotations in the story

@@ -37,7 +37,25 @@ public class test {
 
         boolean a = StoryTesterImpl.methodIsTypedAs(theClass.getDeclaredMethods()[0],Type.Given);
         String name = StoryTesterImpl.AnnotationsMethod(theClass,story.getSentence().get(0)).getName();
-        System.out.println();
+
+        Object temp1 = theClass.getConstructor().newInstance();
+        Object temp2 = theClass.getConstructor().newInstance();
+        boolean isCloned = false;
+        Method function;
+        Class<?> tempClass = theClass;
+        while(theClass != null)
+        {
+
+            try {
+                function = theClass.getDeclaredMethod("clone");
+            } catch (NoSuchMethodException e) {
+                theClass = theClass.getSuperclass();
+                continue;
+            }
+            temp2 = function.invoke(temp1);
+            isCloned = true;
+            break;
+        }
 
     }
     private String getAnnoValue (Method func, Type type)

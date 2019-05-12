@@ -22,7 +22,7 @@ public class test {
     }
 
     @Test
-    public void IdanTest() {
+    public void IdanTest() throws Exception{
         Class<?> theClass = DogStoryTest.class;
         Type type = Type.Given;
 
@@ -36,7 +36,7 @@ public class test {
         Story story = new Story(str);
 
         boolean a = StoryTesterImpl.methodIsTypedAs(theClass.getDeclaredMethods()[0],Type.Given);
-        String name = StoryTesterImpl.AnnotaionsMethod(theClass,story.getSentence().get(0)).getName();
+        String name = StoryTesterImpl.AnnotationsMethod(theClass,story.getSentence().get(0)).getName();
         System.out.println();
 
     }

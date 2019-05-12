@@ -16,16 +16,29 @@ import java.util.stream.Collectors;
 public class StoryTesterImpl implements StoryTester {
     @Override
     public void testOnInheritanceTree(String story, Class<?> testClass) throws Exception {
-        if (testClass == null) {
-            throw new IllegalArgumentException();
-        }
         checkStory(story, testClass);
     }
 
     @Override
     public void testOnNestedClasses(String story, Class<?> testClass) throws Exception {
-        if (testClass == null) {
-            throw new IllegalArgumentException();
+        try {
+            checkStory(story, testClass);
+        } catch (GivenNotFoundException e1)
+        {
+
+                for (Class subClass:(testClass.getClasses()))
+                {
+                    try {
+                        //for each sub class, try to run the story REGULARLY until successful
+                        //or until all the subclass had run out.
+                        testOnNestedClasses(story, subClass);
+                    } catch (GivenNotFoundException e2) {continue;}
+                    return;
+                }
+                //if reached here then for all the for iterations, there were
+                //exceptions and the function was not found
+                //and so we throw the same exception we received
+            throw e1;
         }
     }
 

@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import static Solution.LegalSentnce.*;
+import static Solution.LegalSentence.*;
 
 public class test {
 

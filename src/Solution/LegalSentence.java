@@ -1,11 +1,8 @@
 package Solution;
 
-import java.net.InterfaceAddress;
-import java.text.Annotation;
 import java.util.ArrayList;
-import java.util.LinkedList;
 
-public class LegalSentnce {
+public class LegalSentence {
 
 
     public enum Type {Given, When, Then}
@@ -16,7 +13,7 @@ public class LegalSentnce {
     private String comparable;
 
     //Constructor. get sentence and compute:type, parameters and comparable string.
-    public LegalSentnce(String str) {
+    public LegalSentence(String str) {
         //"this.input" compute:
         this.input = str;
         //"this.type" compute:
@@ -55,7 +52,7 @@ public class LegalSentnce {
     }
 
     //Copy constructor:
-    public LegalSentnce(LegalSentnce cent) {
+    public LegalSentence(LegalSentence cent) {
         this.input = cent.input;
         this.type = cent.type;
         this.parameters = new ArrayList<>();

@@ -1,11 +1,12 @@
 package Solution;
 
-import Provided.StoryTester;
+import Provided.*;
 import org.junit.ComparisonFailure;
 
 import java.awt.List;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -15,7 +16,10 @@ import java.util.stream.Collectors;
 public class StoryTesterImpl implements StoryTester {
     @Override
     public void testOnInheritanceTree(String story, Class<?> testClass) throws Exception {
-
+        if (testClass == null) {
+            throw new IllegalArgumentException();
+        }
+        checkStory(story, testClass);
     }
 
     @Override
@@ -25,18 +29,27 @@ public class StoryTesterImpl implements StoryTester {
         }
     }
 
-    public static Method AnnotationsMethod(Class<?> testClass, LegalSentnce sentence) {
+    public static Method AnnotationsMethod(Class<?> testClass, LegalSentence sentence)
+            throws WordNotFoundException {
         ArrayList<Method> toRet = Arrays.stream(testClass.getDeclaredMethods())
                 .filter(m -> methodIsTypedAs(m, sentence.getType()))
                 .collect(Collectors.toCollection(ArrayList::new));
         String s1 = sentence.getComparable();
-        String s2 = AnnotationsToComaparable(getAnnoValue(toRet.get(0), sentence.getType()));
+        String s2 = AnnotationsToComparable(getAnnoValue(toRet.get(0), sentence.getType()));
         toRet = toRet.stream()
                 .filter(m -> (sentence.getComparable()
-                        .equals(AnnotationsToComaparable(getAnnoValue(m, sentence.getType())))))
+                        .equals(AnnotationsToComparable(getAnnoValue(m, sentence.getType())))))
                 .collect(Collectors.toCollection(ArrayList::new));
         if (toRet.isEmpty()) {
-            return null;
+            switch (sentence.getType()) {
+                case Given:
+                    throw new GivenNotFoundException();
+                case When:
+                    throw new WhenNotFoundException();
+                case Then:
+                    throw new ThenNotFoundException();
+            }
+            //was: return null;
         }
         return toRet.get(0);
     }
@@ -48,7 +61,7 @@ public class StoryTesterImpl implements StoryTester {
     }
 
     //return the value of the annotation
-    private static String getAnnoValue(Method func, LegalSentnce.Type type) {
+    private static String getAnnoValue(Method func, LegalSentence.Type type) {
         switch (type) {
             case Given:
                 return func.getAnnotation(Given.class).value();
@@ -63,7 +76,7 @@ public class StoryTesterImpl implements StoryTester {
 
     //gets an annotation (not an instance with parameters)
     //returns the comparable version of it
-    private static String AnnotationsToComaparable(String str) {
+    private static String AnnotationsToComparable(String str) {
         String[] array = str.split(" ");
         StringBuilder toRet = new StringBuilder();
         for (int i = 0; i < array.length; i++) {
@@ -75,10 +88,10 @@ public class StoryTesterImpl implements StoryTester {
         return toRet.toString().split(" ", 2)[1];
     }
 
-    public static boolean methodIsTypedAs(Method func, LegalSentnce.Type type) {
-        return (type == LegalSentnce.Type.Given && func.getAnnotation(Given.class) != null
-                || type == LegalSentnce.Type.When && func.getAnnotation(When.class) != null
-                || type == LegalSentnce.Type.Then && func.getAnnotation(Then.class) != null);
+    public static boolean methodIsTypedAs(Method func, LegalSentence.Type type) {
+        return (type == LegalSentence.Type.Given && func.getAnnotation(Given.class) != null
+                || type == LegalSentence.Type.When && func.getAnnotation(When.class) != null
+                || type == LegalSentence.Type.Then && func.getAnnotation(Then.class) != null);
 
     }
 
@@ -104,44 +117,71 @@ public class StoryTesterImpl implements StoryTester {
         return toRet;
     }
 
-    //Function for the boss: Nadav
-    private static void forNadav(String story, Class<?> testClass) throws Exception {
-        try {
-            Object objTest = testClass.getConstructor().newInstance();
-            for (String sentence : storyToSentenceList(story)) {
-                //for EACH sentence do:
-                LegalSentnce tempLegalSentence = new LegalSentnce(sentence);
-                Method tempMethod = AnnotationsMethod(testClass, tempLegalSentence);
-                ArrayList<ArrayList<String>> parameters = tempLegalSentence.getParameters();
-                if (tempMethod == null || parameters == null) {
-                    throw new Exception(); //TODO: Edit! throw exception
-                } else {
-                    boolean methodThenSuccessFlag = false;//used for Then sentence with "or"'s
-                    for (ArrayList<String> layerOfParameters : parameters) {
-                        try {
-                            tempMethod.invoke(objTest, fixParameters(layerOfParameters, tempMethod));
-                            methodThenSuccessFlag = true;
-                        } catch (ComparisonFailure e) {
-                            //empty because if we get in here, the flag is still on FALSE
-                        }
-                        if (methodThenSuccessFlag) {
-                            break;
-                        }
-                    }
+    private static Object makeBackUp(Object objTest) throws Exception {
+        Object backUp = objTest.getClass().getConstructor().newInstance();
+        for (Field fFrom : objTest.getClass().getFields()) {
+            Object fieldTemp;
+            if (fFrom.get(objTest) instanceof Cloneable) {//Clone:
+                fieldTemp = fFrom.get(objTest);//TODO: clone, how?
+            } else {//Copy constructor:
+                if (/*have copy constructor*/) {
+                    //TODO: copy it with the copy Ctor.
+                } else {//just save the object
+                    fieldTemp = fFrom.get(objTest);
                 }
             }
-
-
-            //TODO: handed all catches, check what to do or throw
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
+            backUp.getClass().getField(fFrom.getName()).set(backUp, fieldTemp);
         }
+        return backUp;
+    }
 
+    /**
+     * main function, gets a story and test class,
+     * and run the matching methods to the annotations in the story
+     *
+     * @param story     the story given, as String.
+     * @param testClass the test class given from user, includes all the methods with annotations
+     * @throws Exception
+     */
+    private static void checkStory(String story, Class<?> testClass) throws Exception {
+        Object objTest = testClass.getConstructor().newInstance();
+        int thenFailedCounter = 0;
+        String firstThenFailed = "";
+        for (String sentence : storyToSentenceList(story)) {
+            //for EACH sentence do:
+            LegalSentence tempLegalSentence = new LegalSentence(sentence);
+            Method tempMethod = AnnotationsMethod(testClass, tempLegalSentence);
+            ArrayList<ArrayList<String>> parameters = tempLegalSentence.getParameters();
+            if (tempMethod == null || parameters == null) {
+                throw new Exception(); //TODO: Edit! throw exception
+            } else {
+                boolean methodThenSuccessFlag = false;//used for Then sentence with "or"'s
+                int countTriesForThen = (-1);
+                for (ArrayList<String> layerOfParameters : parameters) {
+                    countTriesForThen++;
+                    try {
+                        tempMethod.invoke(objTest, fixParameters(layerOfParameters, tempMethod));
+                        methodThenSuccessFlag = true;
+                        break;//Given/When run only one time- fine
+                        //for Then- if one of them was successful, we want to stop check.
+                    } catch (ComparisonFailure e) {
+                        assert (tempLegalSentence.getType() == LegalSentence.Type.Then);
+                        //empty because if we get in here, the flag is still on FALSE
+                    }
+                }
+                if (!methodThenSuccessFlag) { // if flag is false- means 'Then' FAILED
+                    assert (tempLegalSentence.getType() == LegalSentence.Type.Then);
+                    if (thenFailedCounter == 0) {
+                        firstThenFailed = tempLegalSentence.getInput();
+                    }
+                    thenFailedCounter++;
+
+                }
+            }
+        }
+        if (thenFailedCounter > 0) {
+            throw new StoryTestExceptionImpl(firstThenFailed, , thenFailedCounter);
+        }
     }
 }
+
